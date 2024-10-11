@@ -2,8 +2,10 @@
 
 import socket
 import threading
+import uuid
 
 
+#Happens once the client sends the first message
 def link_handler(link, client):
     print('server start to receiving msg from [%s:%s]....' % (client[0], client[1]))
     while True:
@@ -21,10 +23,14 @@ sk = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # socket.SOCK_STREAM is t
 sk.bind(ip_port)
 sk.listen(5)
 
+#Is the first thing sent after the bind 
 print('start socket server，waiting client...')
 
+
+#Once connected to client, it asks to create a new thread waiting for messages from the client 
 while True:
     conn, address = sk.accept()
-    print('create a new thread to receive msg from [%s:%s]' % (address[0], address[1]))
+    print('create a new thread to receive msg from [%s:%s:%s]' % (address[0], address[1]))
     t = threading.Thread(target=link_handler, args=(conn, address))
     t.start()
+''
