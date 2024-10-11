@@ -35,14 +35,14 @@ s = socket.socket()
 s.connect(ip_port)
 
 # Receive the initial message from the server (like a welcome message) and print it
-server_reply = s.recv(1024).decode()
-print(server_reply)
+# server_reply = s.recv(1024).decode()
+# print(server_reply)
 
 # Start a separate thread to handle receiving messages from the server
 receive_thread = threading.Thread(target=receive_messages, args=(s,))
 receive_thread.daemon = True  # Set the thread as a daemon, allowing it to exit when the main program ends
 receive_thread.start()
-first = True
+
 # Main loop to handle sending messages to the server
 while True:
     # Get input from the user, remove any extra spaces
@@ -61,14 +61,6 @@ while True:
 
     # If the user types 'exit', end the communication and break the loop
     if inp.lower() == "exit":
-        # try:
-        #     server_reply = s.recv(1024).decode()
-        #     if server_reply:
-        #         print(f"Final server message: {server_reply}")
-        #     else:
-        #         print("No final message from the server.")
-        # except Exception as e:
-        #     print(f"Error receiving final message: {e}")
         
         stop_receiving = True
         receive_thread.join()

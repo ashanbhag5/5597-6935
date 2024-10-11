@@ -51,7 +51,7 @@ def link_handler(link, client):
                 continue
             #Check if the message is correctly formatted as "UIUD: Message"
             if validate_message(client_data) == True:
-                print("got it")
+                
                 receiver_address, receiver_message = get_address(client_data)
                 
                 #Get the receiver's socket based on their UIUD
@@ -63,10 +63,10 @@ def link_handler(link, client):
                 if receiver_socket:  
                     receiver_socket.send(f"Message from {current_uid}: {receiver_message}".encode())
                     document_message(current_uid, receiver_address, receiver_message)
-                    print(f"Sent history to client {current_uid}")
-
+                    
                 else:
                     print(f"Error: No socket found for UID {receiver_address}")
+                    link.sendall(f"Error: No socket found for UID {receiver_address}".encode())
             #If the client requests message history with another UUID
             if validate_history_message(client_data):
                 receiver_id = get_history_id(client_data)
@@ -164,16 +164,6 @@ def validate_message(input_message):
 def get_address(data):
     parts = data.split(":", 1)
     return parts[0].strip(), parts[1].strip()  # Ensure both parts are stripped of whitespace
-
-# def send_message(uid, msg, arr):
-#     receiver_socket = arr.get(uid)  # Use .get to avoid KeyError if uid does not exist
-#     print(uid)
-#     print(receiver_socket)
-#     print(arr)
-#     if receiver_socket:  # Ensure the receiver socket exists
-#         receiver_socket.send(msg.encode())
-#     else:
-#         print(f"Error: No socket found for UID {uid}")
 
 
 
