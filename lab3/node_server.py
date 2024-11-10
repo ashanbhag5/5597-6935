@@ -1,6 +1,7 @@
 import socket
 import threading
 import os
+import random
 
 class NodeServer:
     def __init__(self, node_id, address, all_nodes):
@@ -11,6 +12,7 @@ class NodeServer:
         self.accepted_proposal = None
         self.accepted_value = None
         self.file_path = f"CISC5597_{self.node_id}.txt"
+        self.last_proposal_number = 0
 
         if not os.path.exists(self.file_path):
             with open(self.file_path, 'w') as f:
@@ -29,9 +31,11 @@ class NodeServer:
         conn.send(f"Proposal initiated by Node {self.node_id} for Proposer {proposer_type}".encode())
         conn.close()
 
-    def start_paxos_process(self, value):
+    def start_paxos_process(self, value, prop_num):
         """Initiate Paxos process starting with Prepare phase."""
-        proposal_number = 1  # Increment this for a unique proposal
+        self.last_proposal_number += 10
+        
+        proposal_number = prop_num  # Increment this for a unique proposal
         print(f"Node {self.node_id}: Starting Paxos process with proposal number {proposal_number} and value {value}.")
         prepare_responses = self.send_prepare(proposal_number)
         
@@ -138,21 +142,25 @@ class NodeServer:
         """Handle incoming PREPARE, ACCEPT, and START_PAXOS requests from clients."""
         message = conn.recv(1024).decode()
         parts = message.split()
+        
 
         if parts[0] == "START_PAXOS":
             # Initiate Paxos based on proposer type and value
             proposer_type = parts[1]
             value = int(parts[2])
-        
+            if proposer_type == 'A':
+                proposal_num = 1
+            else:
+                proposal_num = 2
             # Only allow Node 1 to initiate for Proposer A and Node 3 for Proposer B
             if (proposer_type == 'A' and self.node_id == 1) or (proposer_type == 'B' and self.node_id == 3):
-                self.start_paxos_process(value)
+                self.start_paxos_process(value, proposal_num)
                 response = f"Proposal initiated by Node {self.node_id} for Proposer {proposer_type}"
             else:
                 response = "Invalid Proposer"
 
         elif parts[0] == "PREPARE":
-            proposal_number = self.min_proposal + 1
+            proposal_number = int(parts[1])
             response = self.handle_prepare(proposal_number)
 
         elif parts[0] == "ACCEPT":
