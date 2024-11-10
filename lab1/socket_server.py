@@ -3,11 +3,13 @@
 import socket
 import threading
 import uuid
-import sys
+
 
 # Dictionaries to store current clients and their message history
 current_clients = {}  # Holds connected clients and their UUIDs
+#Format:    Client UUID: Client Link
 history = {}  # Keeps track of message exchanges between clients
+#Format:   Client1UIUDClient2UIUD: messages
 
 
 #Function to handle communication with a connected client
@@ -95,6 +97,23 @@ def link_handler(link, client):
 
 
 
+#Validates if a message is in the format "<UUID>:<Message>"
+def validate_message(input_message):
+    parts = input_message.split(":", 1)  # Split on the first colon only
+    if len(parts) == 2:
+        uid, message = parts[0].strip(), parts[1].strip()
+        # Add additional checks if necessary, for example:
+        if uid and message:  # Ensure both UID and message are non-empty
+            return True
+    return False
+
+
+# Splits the message into the recipient's UUID and the actual message
+def get_address(data):
+    parts = data.split(":", 1)
+    return parts[0].strip(), parts[1].strip()  # Ensure both parts are stripped of whitespace
+
+
 
 #Function to document messages exchanged between clients
 def document_message(sender_address, receiver_address, msg):
@@ -147,23 +166,6 @@ def request_history_data(sender_id, receiver_id):
         return history[unique_id]
         
 
-
-
-#Validates if a message is in the format "<UUID>:<Message>"
-def validate_message(input_message):
-    parts = input_message.split(":", 1)  # Split on the first colon only
-    if len(parts) == 2:
-        uid, message = parts[0].strip(), parts[1].strip()
-        # Add additional checks if necessary, for example:
-        if uid and message:  # Ensure both UID and message are non-empty
-            return True
-    return False
-
-
-# Splits the message into the recipient's UUID and the actual message
-def get_address(data):
-    parts = data.split(":", 1)
-    return parts[0].strip(), parts[1].strip()  # Ensure both parts are stripped of whitespace
 
 
 
