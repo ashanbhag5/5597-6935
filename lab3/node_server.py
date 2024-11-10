@@ -1,6 +1,6 @@
-import socket
-import threading
 import os
+from multiprocessing.connection import Listener, Client
+from time import sleep
 
 class NodeServer:
     def __init__(self, node_id, address, all_nodes):
@@ -16,9 +16,9 @@ class NodeServer:
             with open(self.file_path, 'w') as f:
                 f.write("Initial content of CISC5597\n")
 
-    def handle_client(self, conn, addr):
+    def handle_client(self, conn):
         """Handle client request to start the proposal process."""
-        data = conn.recv(1024).decode()
+        data = conn.recv()
         proposer_type, value = data.split()
         
         if proposer_type == 'A' and self.node_id == 1:
@@ -26,7 +26,7 @@ class NodeServer:
         elif proposer_type == 'B' and self.node_id == 3:
             self.start_paxos_process(int(value))
         
-        conn.send(f"Proposal initiated by Node {self.node_id} for Proposer {proposer_type}".encode())
+        conn.send(f"Proposal initiated by Node {self.node_id} for Proposer {proposer_type}")
         conn.close()
 
     def start_paxos_process(self, value):
@@ -66,35 +66,33 @@ class NodeServer:
         """Send Prepare(n) message to all nodes (including self) and collect responses."""
         responses = []
         for node in self.all_nodes:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(node)
-            message = f"PREPARE {proposal_number}"
-            s.send(message.encode())
-            response = s.recv(1024).decode()  # Assumes the response is of the form "PREPARE_OK proposal_value"
-            status, accepted_proposal, accepted_value = response.split()
-            responses.append({
-                'status': status,
-                'accepted_proposal': int(accepted_proposal) if accepted_proposal != 'None' else None,
-                'accepted_value': int(accepted_value) if accepted_value != 'None' else None
-            })
-            print(f"Node {self.node_id} received response: {response}")
-            s.close()
+            address = node[0]
+            port = node[1] + 1000  # Assuming port offset for this example
+            with Client((address, port)) as conn:
+                message = f"PREPARE {proposal_number}"
+                conn.send(message)
+                response = conn.recv()
+                status, accepted_proposal, accepted_value = response.split()
+                responses.append({
+                    'status': status,
+                    'accepted_proposal': int(accepted_proposal) if accepted_proposal != 'None' else None,
+                    'accepted_value': int(accepted_value) if accepted_value != 'None' else None
+                })
+                print(f"Node {self.node_id} received response: {response}")
         return responses
-    
-
 
     def send_accept(self, proposal_number, value):
         """Send Accept(n, value) message to all nodes and collect responses."""
         responses = []
         for node in self.all_nodes:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(node)
-            message = f"ACCEPT {proposal_number} {value}"
-            s.send(message.encode())
-            response = s.recv(1024).decode()
-            responses.append(response)
-            print(f"Node {self.node_id} sent ACCEPT message to {node}, received response: {response}")
-            s.close()
+            address = node[0]
+            port = node[1] + 1000  # Assuming port offset for this example
+            with Client((address, port)) as conn:
+                message = f"ACCEPT {proposal_number} {value}"
+                conn.send(message)
+                response = conn.recv()
+                responses.append(response)
+                print(f"Node {self.node_id} sent ACCEPT message to {node}, received response: {response}")
         return responses
 
     def finalize_value(self, value):
@@ -127,47 +125,38 @@ class NodeServer:
 
     def start(self):
         """Start the server and listen for incoming connections."""
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.bind(self.address)
-        server.listen()
+        listener = Listener(self.address)
         print(f"Node {self.node_id} started at {self.address}")
 
         while True:
-            conn, addr = server.accept()
-            threading.Thread(target=self.handle_request, args=(conn,)).start()
+            conn = listener.accept()
+            message = conn.recv()
+            parts = message.split()
 
-    def handle_request(self, conn):
-        """Handle incoming PREPARE, ACCEPT, and START_PAXOS requests from clients."""
-        message = conn.recv(1024).decode()
-        parts = message.split()
+            if parts[0] == "START_PAXOS":
+                proposer_type = parts[1]
+                value = int(parts[2])
+                if (proposer_type == 'A' and self.node_id == 1) or (proposer_type == 'B' and self.node_id == 3):
+                    self.start_paxos_process(value)
+                    response = f"Proposal initiated by Node {self.node_id} for Proposer {proposer_type}"
+                else:
+                    response = "Invalid Proposer"
 
-        if parts[0] == "START_PAXOS":
-            # Initiate Paxos based on proposer type and value
-            proposer_type = parts[1]
-            value = int(parts[2])
-        
-            # Only allow Node 1 to initiate for Proposer A and Node 3 for Proposer B
-            if (proposer_type == 'A' and self.node_id == 1) or (proposer_type == 'B' and self.node_id == 3):
-                self.start_paxos_process(value)
-                response = f"Proposal initiated by Node {self.node_id} for Proposer {proposer_type}"
+            elif parts[0] == "PREPARE":
+                proposal_number = int(parts[1])
+                response = self.handle_prepare(proposal_number)
+
+            elif parts[0] == "ACCEPT":
+                proposal_number, value = int(parts[1]), int(parts[2])
+                response = self.handle_accept(proposal_number, value)
+
             else:
-                response = "Invalid Proposer"
+                response = "UNKNOWN_COMMAND"
 
-        elif parts[0] == "PREPARE":
-            proposal_number = int(parts[1])
-            response = self.handle_prepare(proposal_number)
+            conn.send(response)
+            conn.close()
 
-        elif parts[0] == "ACCEPT":
-            proposal_number, value = int(parts[1]), int(parts[2])
-            response = self.handle_accept(proposal_number, value)
 
-        else:
-            response = "UNKNOWN_COMMAND"
-
-        conn.send(response.encode())
-        conn.close()
-    
-    
 if __name__ == "__main__":
     all_nodes = [('localhost', 5001), ('localhost', 5002), ('localhost', 5003)]
     nodes = [NodeServer(1, ('localhost', 5001), all_nodes),
@@ -175,4 +164,4 @@ if __name__ == "__main__":
              NodeServer(3, ('localhost', 5003), all_nodes)]
 
     for node in nodes:
-        threading.Thread(target=node.start).start()
+        node.start()
