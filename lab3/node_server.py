@@ -1,6 +1,7 @@
 # Atharva Shanbhag & Irakli Kalmikov 
 # 11/10/2024 
 # Distributed Systems Lab2
+
 import socket
 import threading
 import os
@@ -10,31 +11,35 @@ class NodeServer:
         self.node_id = node_id
         self.address = address
         self.all_nodes = all_nodes
-        self.min_proposal = 0
-        self.accepted_proposal = None
-        self.accepted_value = None
-        self.file_path = f"CISC5597_{self.node_id}.txt"
-        self.last_proposal_number = 0
+        self.min_proposal = 0  # Minimum proposal number this node is willing to accept
+        self.accepted_proposal = None  # The last proposal number this node accepted
+        self.accepted_value = None  # The last value this node accepted
+        self.file_path = f"CISC5597_{self.node_id}.txt"  # Each node maintains a file as part of simulation
+        self.last_proposal_number = 0  # Tracks the last proposal number
 
+        # Initialize file if it doesn't exist
         if not os.path.exists(self.file_path):
             with open(self.file_path, 'w') as f:
                 f.write("Initial content of CISC5597\n")
 
+    # 1) Proposer: Choose new proposal number n and broadcast Prepare(n) to all servers
     def start_paxos_process(self, value, prop_num):
         proposal_number = self.min_proposal + prop_num
+        print(f"Node {self.node_id}: Starting new Paxos protocol as proposer with proposal number {proposal_number} and value {value}")
         prepare_responses = self.send_prepare(proposal_number)
 
-        # Count PREPARE_OK responses for majority check
+        # 4) Proposer: Count PREPARE_OK responses for majority check
         prepare_ok_count = sum(1 for response in prepare_responses if response['status'] == "PREPARE_OK")
         
         if prepare_ok_count >= 2:
-            # Select highest accepted value if any PREPARE_OK responses with accepted values exist
+            # If any acceptedValues returned, use highest accepted proposal’s value
             highest_accepted = max(
                 (response for response in prepare_responses if response['accepted_value'] is not None),
                 key=lambda x: x['accepted_proposal'], default=None
             )
             if highest_accepted:
                 value = highest_accepted['accepted_value']
+                print(f"Node {self.node_id}: Proposal number {proposal_number} updated with accepted value {value}")
 
             # Proceed to Accept phase
             accept_responses = self.send_accept(proposal_number, value)
@@ -43,6 +48,7 @@ class NodeServer:
             if accept_ok_count >= 2:
                 self.finalize_value(value)
 
+    # Sends a prepare message to all nodes
     def send_prepare(self, proposal_number):
         responses = []
         threads = []
@@ -59,10 +65,12 @@ class NodeServer:
             })
             s.close()
 
+        # Broadcast prepare message to all nodes
         for node in self.all_nodes:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(node)
             message = f"PREPARE {proposal_number}"
+            print(f"Node {self.node_id} (Proposer): Sending PREPARE with proposal number {proposal_number} to Node at {node}")
             s.send(message.encode())
             t = threading.Thread(target=handle_response, args=(node, s))
             threads.append(t)
@@ -73,6 +81,7 @@ class NodeServer:
 
         return responses
 
+    # Sends an accept message to all nodes
     def send_accept(self, proposal_number, value):
         responses = []
         threads = []
@@ -86,6 +95,7 @@ class NodeServer:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(node)
             message = f"ACCEPT {proposal_number} {value}"
+            print(f"Node {self.node_id} (Proposer): Sending ACCEPT with proposal number {proposal_number} and value {value} to Node at {node}")
             s.send(message.encode())
             t = threading.Thread(target=handle_response, args=(node, s))
             threads.append(t)

@@ -53,13 +53,13 @@ if __name__ == "__main__":
     client_b.start()
     
     #SCENARIO 2 (COMMENT IT OUT):
-    proposer_c = ProposerClient(proposer_type='A', value=8, node_address=node_1_address)
-    client_c = threading.Thread(target=proposer_a.send_proposal, args=())
-    proposer_d = ProposerClient(proposer_type='B', value=10, node_address=node_3_address)
-    client_d = threading.Thread(target=proposer_b.send_proposal, args=())
+    # proposer_c = ProposerClient(proposer_type='A', value=8, node_address=node_1_address)
+    # client_c = threading.Thread(target=proposer_a.send_proposal, args=())
+    # proposer_d = ProposerClient(proposer_type='B', value=10, node_address=node_3_address)
+    # client_d = threading.Thread(target=proposer_b.send_proposal, args=())
     
-    client_a.start()
-    time.sleep(0.02)
-    client_b.start()
+    # client_a.start()
+    # time.sleep(0.02)
+    # client_b.start()
 
 
