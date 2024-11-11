@@ -64,7 +64,7 @@ if __name__ == "__main__":
     # client_b = threading.Thread(target=proposer_b.send_proposal, args=())
     
     # client_a.start()
-    # time.sleep(0.02)
+    # time.sleep(0.002)
     # client_b.start()
 
 
