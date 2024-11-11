@@ -1,4 +1,6 @@
 import socket
+import threading
+import time
 
 class ProposerClient:
     def __init__(self, proposer_type, value, node_address):
@@ -36,8 +38,13 @@ if __name__ == "__main__":
     
     # Example for Proposer Client A (connects to Node 1)
     proposer_a = ProposerClient(proposer_type='A', value=3, node_address=node_1_address)
-    proposer_a.send_proposal()
+    #proposer_a.send_proposal()
+    client_a = threading.Thread(target=proposer_a.send_proposal, args=())
 
     # Example for Proposer Client B (connects to Node 3)
     proposer_b = ProposerClient(proposer_type='B', value=5, node_address=node_3_address)
-    proposer_b.send_proposal()
+    #proposer_b.send_proposal()
+    client_b = threading.Thread(target=proposer_b.send_proposal, args=())
+    client_a.start()
+    time.sleep(0.01)
+    client_b.start()

@@ -65,9 +65,9 @@ class NodeServer:
                 print(f"Node {self.node_id}: Proposal {proposal_number} with value {value} accepted by majority.")
                 self.finalize_value(value)
             else:
-                print(f"Node {self.node_id}: Proposal {proposal_number} was rejected. Retrying with a new proposal.")
+                print(f"Node {self.node_id}: Proposal {proposal_number} was rejected.")
                 # Retry with a new proposal number if rejected
-                self.start_paxos_process(value, proposal_number + 1)
+                #self.start_paxos_process(value, proposal_number + 1)
         else:
             print(f"Node {self.node_id}: Proposal {proposal_number} was rejected during the Prepare phase.")
 
