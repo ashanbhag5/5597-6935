@@ -48,23 +48,23 @@ if __name__ == "__main__":
     # Conflicting Proposals
     # SCENARIO 1 A wins:
 
-    proposer_a = ProposerClient(proposer_type='A', value=3, node_address=node_1_address)
-    client_a = threading.Thread(target=proposer_a.send_proposal, args=())
-    proposer_b = ProposerClient(proposer_type='B', value=5, node_address=node_3_address)
-    client_b = threading.Thread(target=proposer_b.send_proposal, args=())
-    
-    client_a.start()
-    time.sleep(1)
-    client_b.start()
-    
-    #SCENARIO 2 B wins(COMMENT IT OUT):
-    # proposer_a = ProposerClient(proposer_type='A', value=8, node_address=node_1_address)
+    # proposer_a = ProposerClient(proposer_type='A', value=3, node_address=node_1_address)
     # client_a = threading.Thread(target=proposer_a.send_proposal, args=())
-    # proposer_b = ProposerClient(proposer_type='B', value=10, node_address=node_3_address)
+    # proposer_b = ProposerClient(proposer_type='B', value=5, node_address=node_3_address)
     # client_b = threading.Thread(target=proposer_b.send_proposal, args=())
     
     # client_a.start()
-    # time.sleep(0.002)
-    # client_b.start()  
+    # time.sleep(1)
+    # client_b.start()
+    
+    #SCENARIO 2 B wins(COMMENT IT OUT):
+    proposer_a = ProposerClient(proposer_type='A', value=8, node_address=node_1_address)
+    client_a = threading.Thread(target=proposer_a.send_proposal, args=())
+    proposer_b = ProposerClient(proposer_type='B', value=10, node_address=node_3_address)
+    client_b = threading.Thread(target=proposer_b.send_proposal, args=())
+    
+    client_a.start()
+    time.sleep(0.002)
+    client_b.start()  
 
 
