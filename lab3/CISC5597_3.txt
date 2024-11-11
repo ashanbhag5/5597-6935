@@ -1,1 +1,1 @@
-Accepted value: 5
+Accepted value: 3

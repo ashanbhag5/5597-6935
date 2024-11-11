@@ -1,3 +1,6 @@
+#Atharva Shanbhag & Irakli Kalmikov 
+# 11/10/2024 
+# Distributed Systems Lab 2
 import socket
 import threading
 import time
@@ -46,5 +49,5 @@ if __name__ == "__main__":
     #proposer_b.send_proposal()
     client_b = threading.Thread(target=proposer_b.send_proposal, args=())
     client_a.start()
-    time.sleep(0.01)
+    time.sleep(10)
     client_b.start()

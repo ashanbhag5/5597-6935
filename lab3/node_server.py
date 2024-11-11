@@ -1,3 +1,6 @@
+#Atharva Shanbhag & Irakli Kalmikov 
+# 11/10/2024 
+# Distributed Systems Lab2
 import socket
 import threading
 import os
@@ -155,7 +158,9 @@ class NodeServer:
         if proposal_number >= self.min_proposal:
             self.accepted_proposal = self.min_proposal = proposal_number
             self.accepted_value = value
-            print(f"Node {self.node_id}: Accepted ACCEPT proposal {proposal_number} with value {value}.")
+            print(f"Node {self.node_id}: Accepted proposal {proposal_number} with value {value}.")
+            with open(self.file_path, 'w') as f:
+                f.write(f"Accepted value: {value}\n")
             return "ACCEPT_OK"
         else:
             print(f"Node {self.node_id}: Rejected ACCEPT proposal {proposal_number} with value {value}.")
