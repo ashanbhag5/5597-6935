@@ -10,7 +10,7 @@ class NodeServer:
         self.node_id = node_id
         self.address = address
         self.all_nodes = all_nodes
-        self.min_proposal = -1
+        self.min_proposal = 0
         self.accepted_proposal = None
         self.accepted_value = None
         self.file_path = f"CISC5597_{self.node_id}.txt"
@@ -21,7 +21,7 @@ class NodeServer:
                 f.write("Initial content of CISC5597\n")
 
     def start_paxos_process(self, value, prop_num):
-        proposal_number = prop_num
+        proposal_number = self.min_proposal + prop_num
         prepare_responses = self.send_prepare(proposal_number)
 
         # Count PREPARE_OK responses for majority check
@@ -141,7 +141,7 @@ class NodeServer:
         if parts[0] == "START_PAXOS":
             proposer_type = parts[1]
             value = int(parts[2])
-            proposal_num = 1 if proposer_type == 'A' else 2
+            proposal_num = 5 if proposer_type == 'A' else 7
             if (proposer_type == 'A' and self.node_id == 1) or (proposer_type == 'B' and self.node_id == 3):
                 self.start_paxos_process(value, proposal_num)
                 response = f"Proposal initiated by Node {self.node_id} for Proposer {proposer_type}"

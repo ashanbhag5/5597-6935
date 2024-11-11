@@ -39,15 +39,27 @@ if __name__ == "__main__":
     node_1_address = ('localhost', 5001)
     node_3_address = ('localhost', 5003)
     
-    # Example for Proposer Client A (connects to Node 1)
-    proposer_a = ProposerClient(proposer_type='A', value=3, node_address=node_1_address)
-    #proposer_a.send_proposal()
-    client_a = threading.Thread(target=proposer_a.send_proposal, args=())
 
-    # Example for Proposer Client B (connects to Node 3)
+    
+    #SCENARIO 1:
+
+    proposer_a = ProposerClient(proposer_type='A', value=3, node_address=node_1_address)
+    client_a = threading.Thread(target=proposer_a.send_proposal, args=())
     proposer_b = ProposerClient(proposer_type='B', value=5, node_address=node_3_address)
-    #proposer_b.send_proposal()
     client_b = threading.Thread(target=proposer_b.send_proposal, args=())
+    
     client_a.start()
-    time.sleep(10)
+    time.sleep(2)
     client_b.start()
+    
+    #SCENARIO 2 (COMMENT IT OUT):
+    proposer_c = ProposerClient(proposer_type='A', value=8, node_address=node_1_address)
+    client_c = threading.Thread(target=proposer_a.send_proposal, args=())
+    proposer_d = ProposerClient(proposer_type='B', value=10, node_address=node_3_address)
+    client_d = threading.Thread(target=proposer_b.send_proposal, args=())
+    
+    client_a.start()
+    time.sleep(0.02)
+    client_b.start()
+
+
