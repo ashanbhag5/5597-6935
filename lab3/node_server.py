@@ -1,10 +1,9 @@
-#Atharva Shanbhag & Irakli Kalmikov 
+# Atharva Shanbhag & Irakli Kalmikov 
 # 11/10/2024 
 # Distributed Systems Lab2
 import socket
 import threading
 import os
-import random
 
 class NodeServer:
     def __init__(self, node_id, address, all_nodes):
@@ -21,35 +20,15 @@ class NodeServer:
             with open(self.file_path, 'w') as f:
                 f.write("Initial content of CISC5597\n")
 
-    def handle_client(self, conn, addr):
-        """Handle client request to start the proposal process."""
-        data = conn.recv(1024).decode()
-        proposer_type, value = data.split()
-        
-        if proposer_type == 'A' and self.node_id == 1:
-            self.start_paxos_process(int(value))
-        elif proposer_type == 'B' and self.node_id == 3:
-            self.start_paxos_process(int(value))
-        
-        conn.send(f"Proposal initiated by Node {self.node_id} for Proposer {proposer_type}".encode())
-        conn.close()
-
     def start_paxos_process(self, value, prop_num):
-        self.last_proposal_number += 10
-        
-        proposal_number = prop_num  # Increment this for a unique proposal
-        print(f"Node {self.node_id}: Starting Paxos process with proposal number {proposal_number} and value {value}.")
-        
+        proposal_number = prop_num
         prepare_responses = self.send_prepare(proposal_number)
-        
-        # Track number of PREPARE_OK responses
+
+        # Count PREPARE_OK responses for majority check
         prepare_ok_count = sum(1 for response in prepare_responses if response['status'] == "PREPARE_OK")
         
-        # Ensure majority is reached before proceeding to the next phase
         if prepare_ok_count >= 2:
-            print(f"Node {self.node_id}: Got {prepare_ok_count} PREPARE_OK responses out of {len(prepare_responses)}.")
-            
-            # Step 4: Choose highest accepted value if any accepted values were returned
+            # Select highest accepted value if any PREPARE_OK responses with accepted values exist
             highest_accepted = max(
                 (response for response in prepare_responses if response['accepted_value'] is not None),
                 key=lambda x: x['accepted_proposal'], default=None
@@ -61,21 +40,10 @@ class NodeServer:
             accept_responses = self.send_accept(proposal_number, value)
             accept_ok_count = sum(1 for response in accept_responses if response == "ACCEPT_OK")
             
-            print(f"Node {self.node_id}: Got {accept_ok_count} ACCEPT_OK responses out of {len(accept_responses)}.")
-            
-            # Step 7: Check if value is chosen or retry if rejected
             if accept_ok_count >= 2:
-                print(f"Node {self.node_id}: Proposal {proposal_number} with value {value} accepted by majority.")
                 self.finalize_value(value)
-            else:
-                print(f"Node {self.node_id}: Proposal {proposal_number} was rejected.")
-                # Retry with a new proposal number if rejected
-                #self.start_paxos_process(value, proposal_number + 1)
-        else:
-            print(f"Node {self.node_id}: Proposal {proposal_number} was rejected during the Prepare phase.")
 
     def send_prepare(self, proposal_number):
-        """Send Prepare(n) message to all nodes (including self) and collect responses asynchronously."""
         responses = []
         threads = []
 
@@ -89,10 +57,8 @@ class NodeServer:
                 'accepted_proposal': int(accepted_proposal) if accepted_proposal != 'None' else None,
                 'accepted_value': int(accepted_value) if accepted_value != 'None' else None
             })
-            print(f"Node {self.node_id} sent PREPARE message to {node}, received response: {response}")
             s.close()
 
-        # Send prepare messages to all nodes concurrently
         for node in self.all_nodes:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(node)
@@ -102,25 +68,20 @@ class NodeServer:
             threads.append(t)
             t.start()
 
-        # Wait for the threads to finish
         for t in threads:
             t.join()
 
         return responses
 
     def send_accept(self, proposal_number, value):
-        """Send Accept(n, value) message to all nodes and collect responses asynchronously."""
         responses = []
         threads = []
 
-        # Define a callback for handling responses
         def handle_response(node, s):
             response = s.recv(1024).decode()
             responses.append(response)
-            print(f"Node {self.node_id} sent ACCEPT message to {node}, received response: {response}")
             s.close()
 
-        # Send accept messages to all nodes concurrently
         for node in self.all_nodes:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(node)
@@ -130,7 +91,6 @@ class NodeServer:
             threads.append(t)
             t.start()
 
-        # Wait for the threads to finish
         for t in threads:
             t.join()
 
@@ -144,30 +104,27 @@ class NodeServer:
         print(f"Node {self.node_id}: Finalized value {value}.")
 
     def handle_prepare(self, proposal_number):
-        """Process a PREPARE message and respond accordingly."""
         if proposal_number > self.min_proposal:
             self.min_proposal = proposal_number
-            print(f"Node {self.node_id}: Accepted PREPARE request with proposal number {proposal_number}.")
+            print(f"Node {self.node_id}: PREPARE_OK for proposal number {proposal_number}.")
             return f"PREPARE_OK {self.accepted_proposal or 'None'} {self.accepted_value or 'None'}"
         else:
-            print(f"Node {self.node_id}: Rejected PREPARE request with proposal number {proposal_number}.")
+            print(f"Node {self.node_id}: PREPARE_REJECTED for proposal number {proposal_number}.")
             return "REJECTED None None"
 
     def handle_accept(self, proposal_number, value):
-        """Process an ACCEPT message and respond accordingly."""
         if proposal_number >= self.min_proposal:
             self.accepted_proposal = self.min_proposal = proposal_number
             self.accepted_value = value
-            print(f"Node {self.node_id}: Accepted proposal {proposal_number} with value {value}.")
+            print(f"Node {self.node_id}: ACCEPT_OK for proposal {proposal_number} with value {value}.")
             with open(self.file_path, 'w') as f:
                 f.write(f"Accepted value: {value}\n")
             return "ACCEPT_OK"
         else:
-            print(f"Node {self.node_id}: Rejected ACCEPT proposal {proposal_number} with value {value}.")
+            print(f"Node {self.node_id}: REJECTED for ACCEPT proposal {proposal_number} with value {value}.")
             return "REJECTED"
 
     def start(self):
-        """Start the server and listen for incoming connections."""
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.bind(self.address)
         server.listen()
@@ -178,23 +135,14 @@ class NodeServer:
             threading.Thread(target=self.handle_request, args=(conn,)).start()
 
     def handle_request(self, conn):
-        """Handle incoming PREPARE, ACCEPT, and START_PAXOS requests from clients."""
         message = conn.recv(1024).decode()
         parts = message.split()
-        
-        print(f"Node {self.node_id}: Received message: {message}")
 
         if parts[0] == "START_PAXOS":
-            # Initiate Paxos based on proposer type and value
             proposer_type = parts[1]
             value = int(parts[2])
-            if proposer_type == 'A':
-                proposal_num = 1
-            else:
-                proposal_num = 2
-            # Only allow Node 1 to initiate for Proposer A and Node 3 for Proposer B
+            proposal_num = 1 if proposer_type == 'A' else 2
             if (proposer_type == 'A' and self.node_id == 1) or (proposer_type == 'B' and self.node_id == 3):
-                print(f"Node {self.node_id}: Initiating Paxos for Proposer {proposer_type} with value {value}.")
                 self.start_paxos_process(value, proposal_num)
                 response = f"Proposal initiated by Node {self.node_id} for Proposer {proposer_type}"
             else:
